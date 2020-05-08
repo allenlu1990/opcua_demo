@@ -1,11 +1,13 @@
 package com.scc.runner.task;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
+import org.eclipse.milo.opcua.sdk.client.api.nodes.Node;
 import org.eclipse.milo.opcua.sdk.client.api.nodes.VariableNode;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerTypeNode;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.variables.ServerStatusTypeNode;
@@ -40,8 +42,8 @@ public class ReadNodeExample implements ClientExample {
                     .findFirst(),
             configBuilder ->
                 configBuilder
-                    .setApplicationName(LocalizedText.english("eclipse milo opc-ua client"))
-                    .setApplicationUri("urn:eclipse:milo:examples:client")
+//                    .setApplicationName(LocalizedText.english("eclipse milo opc-ua client"))
+//                    .setApplicationUri("urn:eclipse:milo:examples:client")
                     .setIdentityProvider(example.getIdentityProvider())
                     .setRequestTimeout(uint(5000))
                     .build()
@@ -91,15 +93,30 @@ public class ReadNodeExample implements ClientExample {
 
 
         VariableNode node = client.getAddressSpace().createVariableNode(
-            new NodeId(2, "HelloWorld/CustomStructTypeVariable")
+            new NodeId(0, "85")
         );
 
+        browseNode("", client, Identifiers.RootFolder);
         // Read the current value
         DataValue value = node.readValue().get();
         logger.info("Value={}", value);
 
         future.complete(client);
 
+    }
+    private void browseNode(String indent, OpcUaClient client, NodeId browseRoot) {
+        try {
+            List<Node> nodes = client.getAddressSpace().browse(browseRoot).get();
+
+            for (Node node : nodes) {
+                logger.info("{} Node={}", indent, node.getBrowseName().get().getName());
+
+                // recursively browse to children
+                browseNode(indent + "  ", client, node.getNodeId().get());
+            }
+        } catch (InterruptedException | ExecutionException e) {
+            logger.error("Browsing nodeId={} failed: {}", browseRoot, e.getMessage(), e);
+        }
     }
 
 }
